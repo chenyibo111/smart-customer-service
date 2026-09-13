@@ -1,0 +1,16 @@
+{
+  "name": "smart-customer-service",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "dev": "concurrently \"npm --workspace @smart-cs/api run dev\" \"npm --workspace @smart-cs/web run dev\"",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.2"
+  }
+}

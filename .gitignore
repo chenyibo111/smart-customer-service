@@ -1,0 +1,8 @@
+.env
+data/
+node_modules/
+dist/
+.superpowers/
+coverage/
+playwright-report/
+test-results/
