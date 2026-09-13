@@ -1,0 +1,88 @@
+import { readSse, type AgentStreamEvent } from './events.js';
+
+export type Conversation = { id: string; status?: string; controller?: string };
+export type CustomerApi = {
+  createConversation(visitorId: string): Promise<Conversation>;
+  streamMessage(conversationId: string, content: string): AsyncIterable<AgentStreamEvent>;
+  handoff(conversationId: string): Promise<{ conversation: Conversation }>;
+};
+
+async function jsonRequest(path: string, body?: unknown): Promise<Response> {
+  return fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+export const customerApi: CustomerApi = {
+  async createConversation(visitorId) {
+    const response = await jsonRequest('/api/conversations', { visitorId });
+    if (!response.ok) throw new Error('无法创建会话。');
+    return (await response.json() as { conversation: Conversation }).conversation;
+  },
+  async *streamMessage(conversationId, content) {
+    yield* readSse(await jsonRequest(`/api/conversations/${conversationId}/messages`, { content }));
+  },
+  async handoff(conversationId) {
+    const response = await jsonRequest(`/api/conversations/${conversationId}/handoff`, { reason: 'customer_requested' });
+    if (!response.ok) throw new Error('转人工失败，请稍后重试。');
+    return await response.json() as { conversation: Conversation };
+  },
+};
+
+export type Ticket = { id: string; reason?: string; status: string; claimedBy?: string | null };
+export type StaffApi = {
+  listTickets(): Promise<Ticket[]>;
+  claimTicket(ticketId: string): Promise<{ conversation: Conversation; ticket: Ticket }>;
+  sendMessage(ticketId: string, content: string): Promise<{ id: string }>;
+  closeTicket(ticketId: string): Promise<{ conversation: Conversation; ticket: Ticket }>;
+};
+
+export const staffApi: StaffApi = {
+  async listTickets() {
+    const response = await fetch('/api/agent/tickets');
+    if (!response.ok) throw new Error('无法加载工单。');
+    return (await response.json() as { tickets: Ticket[] }).tickets;
+  },
+  async claimTicket(ticketId) {
+    const response = await jsonRequest(`/api/agent/tickets/${ticketId}/claim`, { agentId: 'agent-demo' });
+    if (!response.ok) throw new Error('工单无法接管。');
+    return await response.json() as { conversation: Conversation; ticket: Ticket };
+  },
+  async sendMessage(ticketId, content) {
+    const response = await jsonRequest(`/api/agent/tickets/${ticketId}/messages`, { content });
+    if (!response.ok) throw new Error('发送失败。');
+    return (await response.json() as { message: { id: string } }).message;
+  },
+  async closeTicket(ticketId) {
+    const response = await jsonRequest(`/api/agent/tickets/${ticketId}/close`);
+    if (!response.ok) throw new Error('工单无法关闭。');
+    return await response.json() as { conversation: Conversation; ticket: Ticket };
+  },
+};
+
+export type KnowledgeDocument = { id: string; title: string; indexStatus: string };
+export type Replay = { messages: Array<{ id: string; role: string; content: string }>; toolCalls: Array<{ id: string; name: string; maskedArguments: string; status: string }> };
+export type AdminApi = {
+  listDocuments(): Promise<KnowledgeDocument[]>;
+  importDocument(input: { title: string; markdown: string }): Promise<void>;
+  getReplay(conversationId: string): Promise<Replay>;
+};
+
+export const adminApi: AdminApi = {
+  async listDocuments() {
+    const response = await fetch('/api/admin/documents');
+    if (!response.ok) throw new Error('无法加载知识库。');
+    return (await response.json() as { documents: KnowledgeDocument[] }).documents;
+  },
+  async importDocument(input) {
+    const response = await jsonRequest('/api/admin/documents', input);
+    if (!response.ok) throw new Error('知识导入失败。');
+  },
+  async getReplay(conversationId) {
+    const response = await fetch(`/api/admin/conversations/${conversationId}/replay`);
+    if (!response.ok) throw new Error('无法加载回放。');
+    return await response.json() as Replay;
+  },
+};

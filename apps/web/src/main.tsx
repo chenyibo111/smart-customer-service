@@ -1,11 +1,10 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { AppRouter } from './app/router.js';
+import './styles.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <main>
-      <h1>智客服</h1>
-      <p>智能客服服务正在启动。</p>
-    </main>
+    <AppRouter />
   </StrictMode>,
 );
