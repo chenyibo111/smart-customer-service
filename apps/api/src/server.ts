@@ -1,5 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { config as loadEnvironment } from 'dotenv';
 
 import { AgentOrchestrator } from './agent/orchestrator.js';
 import { DeepSeekClient } from './agent/deepseek-client.js';
@@ -16,6 +18,7 @@ import { ConversationRepository } from './repositories/conversation-repository.j
 import { KnowledgeRepository } from './repositories/knowledge-repository.js';
 import { TraceRepository } from './repositories/trace-repository.js';
 
+loadEnvironment({ path: fileURLToPath(new URL('../../../.env', import.meta.url)) });
 const config = loadConfig(process.env);
 const databasePath = resolve(config.databasePath);
 mkdirSync(dirname(databasePath), { recursive: true });
