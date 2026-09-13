@@ -20,7 +20,7 @@ export function buildApp(input: { database: AppDatabase; agent?: AgentResponder;
   void app.register(cors, { origin: true });
   void app.register(registerConversationRoutes, { conversations, handoffs, agent: input.agent });
   void app.register(registerStaffRoutes, { conversations, handoffs });
-  void app.register(registerAdminRoutes, { knowledge, traces, indexer: input.indexer });
+  void app.register(registerAdminRoutes, { knowledge, conversations, traces, indexer: input.indexer });
   app.get('/health', async () => ({ ok: true }));
 
   return app;

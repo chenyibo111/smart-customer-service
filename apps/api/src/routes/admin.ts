@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
 import type { KnowledgeRepository } from '../repositories/knowledge-repository.js';
+import type { ConversationRepository } from '../repositories/conversation-repository.js';
 import type { TraceRepository } from '../repositories/trace-repository.js';
 
 const documentInput = z.object({
@@ -15,7 +16,7 @@ export type DocumentIndexer = {
 
 export async function registerAdminRoutes(
   app: FastifyInstance,
-  dependencies: { knowledge: KnowledgeRepository; traces: TraceRepository; indexer?: DocumentIndexer },
+  dependencies: { knowledge: KnowledgeRepository; conversations: ConversationRepository; traces: TraceRepository; indexer?: DocumentIndexer },
 ): Promise<void> {
   app.post('/api/admin/documents', async (request, reply) => {
     const parsed = documentInput.safeParse(request.body);
@@ -31,6 +32,8 @@ export async function registerAdminRoutes(
   });
 
   app.get('/api/admin/documents', async () => ({ documents: dependencies.knowledge.listDocuments() }));
+
+  app.get('/api/admin/conversations', async () => ({ conversations: dependencies.conversations.listRecent() }));
 
   app.get('/api/admin/conversations/:id/replay', async (request) => dependencies.traces.getReplay((request.params as { id: string }).id));
 }

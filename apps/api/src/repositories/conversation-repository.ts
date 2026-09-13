@@ -86,6 +86,13 @@ export class ConversationRepository {
     return row ? toConversation(row) : undefined;
   }
 
+  listRecent(limit = 50): ConversationRecord[] {
+    return (this.database
+      .prepare('SELECT * FROM conversations ORDER BY created_at DESC LIMIT ?')
+      .all(limit) as ConversationRow[])
+      .map(toConversation);
+  }
+
   setStatus(
     id: string,
     status: ConversationRecord['status'],

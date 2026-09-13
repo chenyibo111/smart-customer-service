@@ -1,6 +1,7 @@
 import { readSse, type AgentStreamEvent } from './events.js';
 
-export type Conversation = { id: string; status?: string; controller?: string };
+export type Conversation = { id: string; visitorId?: string; status?: string; controller?: string };
+export type ConversationMessage = { id: string; role: 'customer' | 'assistant' | 'agent' | 'system'; content: string };
 export type CustomerApi = {
   createConversation(visitorId: string): Promise<Conversation>;
   streamMessage(conversationId: string, content: string): AsyncIterable<AgentStreamEvent>;
@@ -32,10 +33,12 @@ export const customerApi: CustomerApi = {
 };
 
 export type Ticket = { id: string; reason?: string; status: string; claimedBy?: string | null };
+export type TicketContext = { ticket: Ticket & { conversationId: string }; conversation: Conversation; messages: ConversationMessage[] };
 export type StaffApi = {
   listTickets(): Promise<Ticket[]>;
   claimTicket(ticketId: string): Promise<{ conversation: Conversation; ticket: Ticket }>;
-  sendMessage(ticketId: string, content: string): Promise<{ id: string }>;
+  getTicketContext(ticketId: string): Promise<TicketContext>;
+  sendMessage(ticketId: string, content: string): Promise<ConversationMessage>;
   closeTicket(ticketId: string): Promise<{ conversation: Conversation; ticket: Ticket }>;
 };
 
@@ -50,10 +53,15 @@ export const staffApi: StaffApi = {
     if (!response.ok) throw new Error('工单无法接管。');
     return await response.json() as { conversation: Conversation; ticket: Ticket };
   },
+  async getTicketContext(ticketId) {
+    const response = await fetch(`/api/agent/tickets/${ticketId}/context`);
+    if (!response.ok) throw new Error('无法加载会话上下文。');
+    return await response.json() as TicketContext;
+  },
   async sendMessage(ticketId, content) {
     const response = await jsonRequest(`/api/agent/tickets/${ticketId}/messages`, { content });
     if (!response.ok) throw new Error('发送失败。');
-    return (await response.json() as { message: { id: string } }).message;
+    return (await response.json() as { message: ConversationMessage }).message;
   },
   async closeTicket(ticketId) {
     const response = await jsonRequest(`/api/agent/tickets/${ticketId}/close`);
@@ -63,9 +71,10 @@ export const staffApi: StaffApi = {
 };
 
 export type KnowledgeDocument = { id: string; title: string; indexStatus: string };
-export type Replay = { messages: Array<{ id: string; role: string; content: string }>; toolCalls: Array<{ id: string; name: string; maskedArguments: string; status: string }> };
+export type Replay = { messages: ConversationMessage[]; toolCalls: Array<{ id: string; name: string; maskedArguments: string; status: string }> };
 export type AdminApi = {
   listDocuments(): Promise<KnowledgeDocument[]>;
+  listConversations(): Promise<Conversation[]>;
   importDocument(input: { title: string; markdown: string }): Promise<void>;
   getReplay(conversationId: string): Promise<Replay>;
 };
@@ -79,6 +88,11 @@ export const adminApi: AdminApi = {
   async importDocument(input) {
     const response = await jsonRequest('/api/admin/documents', input);
     if (!response.ok) throw new Error('知识导入失败。');
+  },
+  async listConversations() {
+    const response = await fetch('/api/admin/conversations');
+    if (!response.ok) throw new Error('无法加载会话列表。');
+    return (await response.json() as { conversations: Conversation[] }).conversations;
   },
   async getReplay(conversationId) {
     const response = await fetch(`/api/admin/conversations/${conversationId}/replay`);

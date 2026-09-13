@@ -114,4 +114,36 @@ describe('HTTP API', () => {
     expect(replay.json()).toEqual({ messages: [], toolCalls: [] });
     await app.close();
   });
+
+  it('returns the selected ticket context and lists real conversations for replay', async () => {
+    const app = buildApp({ database });
+    const created = await app.inject({ method: 'POST', url: '/api/conversations', payload: { visitorId: 'visitor-context' } });
+    const conversationId = created.json().conversation.id as string;
+    const handoff = await app.inject({
+      method: 'POST',
+      url: `/api/conversations/${conversationId}/handoff`,
+      payload: { reason: 'customer_requested' },
+    });
+    const ticketId = handoff.json().ticket.id as string;
+    await app.inject({ method: 'POST', url: `/api/agent/tickets/${ticketId}/claim`, payload: { agentId: 'agent-demo' } });
+    await app.inject({
+      method: 'POST',
+      url: `/api/agent/tickets/${ticketId}/messages`,
+      payload: { content: '您好，我已看到您的问题。' },
+    });
+
+    const context = await app.inject({ method: 'GET', url: `/api/agent/tickets/${ticketId}/context` });
+    const conversations = await app.inject({ method: 'GET', url: '/api/admin/conversations' });
+
+    expect(context.statusCode).toBe(200);
+    expect(context.json()).toMatchObject({
+      ticket: { id: ticketId, conversationId },
+      conversation: { id: conversationId, status: 'human_active' },
+      messages: [expect.objectContaining({ role: 'agent', content: '您好，我已看到您的问题。' })],
+    });
+    expect(conversations.json().conversations).toEqual([
+      expect.objectContaining({ id: conversationId, visitorId: 'visitor-context', status: 'human_active' }),
+    ]);
+    await app.close();
+  });
 });

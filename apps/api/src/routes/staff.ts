@@ -13,6 +13,15 @@ export async function registerStaffRoutes(
 ): Promise<void> {
   app.get('/api/agent/tickets', async () => ({ tickets: dependencies.handoffs.listOpenTickets() }));
 
+  app.get('/api/agent/tickets/:id/context', async (request, reply) => {
+    const ticket = dependencies.handoffs.getTicket((request.params as { id: string }).id);
+    if (!ticket) return reply.code(404).send({ code: 'NOT_FOUND', message: '工单不存在。' });
+    const conversation = dependencies.conversations.getById(ticket.conversationId);
+    if (!conversation) return reply.code(404).send({ code: 'NOT_FOUND', message: '会话不存在。' });
+
+    return { ticket, conversation, messages: dependencies.conversations.listMessages(conversation.id) };
+  });
+
   app.post('/api/agent/tickets/:id/claim', async (request, reply) => {
     const parsed = claimInput.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ code: 'INVALID_REQUEST', message: '坐席标识无效。' });
