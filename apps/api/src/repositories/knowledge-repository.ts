@@ -38,6 +38,20 @@ export class KnowledgeRepository {
     return document;
   }
 
+  listDocuments(): KnowledgeDocument[] {
+    return (this.database
+      .prepare('SELECT id, title, source_label, content, index_status, created_at FROM knowledge_documents ORDER BY created_at DESC')
+      .all() as Array<{ id: string; title: string; source_label: string; content: string; index_status: KnowledgeDocument['indexStatus']; created_at: string }>)
+      .map((document) => ({
+        id: document.id,
+        title: document.title,
+        sourceLabel: document.source_label,
+        content: document.content,
+        indexStatus: document.index_status,
+        createdAt: document.created_at,
+      }));
+  }
+
   insertChunks(chunks: Array<{ id: string; documentId: string; content: string; embedding: number[] }>): void {
     const insert = this.database.prepare('INSERT INTO knowledge_chunks (id, document_id, content, embedding_json, created_at) VALUES (?, ?, ?, ?, ?)');
     const now = new Date().toISOString();

@@ -86,4 +86,30 @@ export class HandoffService {
     const claimed = this.database.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId) as TicketRow;
     return { conversation, ticket: toTicket(claimed) };
   }
+
+  listOpenTickets(): TicketRecord[] {
+    return (this.database.prepare('SELECT * FROM tickets WHERE status = ? ORDER BY created_at').all('open') as TicketRow[]).map(toTicket);
+  }
+
+  getTicket(ticketId: string): TicketRecord | undefined {
+    const row = this.database.prepare('SELECT * FROM tickets WHERE id = ?').get(ticketId) as TicketRow | undefined;
+    return row ? toTicket(row) : undefined;
+  }
+
+  closeTicket(ticketId: string): { conversation: ConversationRecord; ticket: TicketRecord } {
+    const ticket = this.getTicket(ticketId);
+    if (!ticket) throw new Error('ticket not found');
+    if (ticket.status !== 'claimed') throw new Error('ticket is not claimed');
+
+    const current = this.conversations.getById(ticket.conversationId);
+    if (!current) throw new Error('conversation not found');
+    const conversation = this.conversations.setStatus(
+      current.id,
+      transitionConversation(current.status, 'ticket_closed'),
+      'human',
+    );
+    const closedAt = new Date().toISOString();
+    this.database.prepare('UPDATE tickets SET status = ?, closed_at = ? WHERE id = ?').run('closed', closedAt, ticketId);
+    return { conversation, ticket: this.getTicket(ticketId)! };
+  }
 }
