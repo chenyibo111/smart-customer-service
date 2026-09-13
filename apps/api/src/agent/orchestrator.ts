@@ -3,6 +3,7 @@ import type { HandoffService } from '../domain/handoff-service.js';
 import type { RetrievedChunk } from '../knowledge/retriever.js';
 import type { ConversationRepository } from '../repositories/conversation-repository.js';
 import type { TraceRepository } from '../repositories/trace-repository.js';
+import type { OrderTool } from './order-tool.js';
 
 export type RetrievalService = {
   search(query: string, limit: number): Promise<RetrievedChunk[]>;
@@ -16,6 +17,17 @@ export type AgentEvent =
   | { type: 'completed' }
   | { type: 'failed'; message: string };
 
+export type ChatModel = {
+  respond(input: {
+    question: string;
+    evidence: RetrievedChunk[];
+    toolResult?: { orderId: string; status: string; summary: string };
+  }): Promise<
+    | { type: 'answer'; content: string }
+    | { type: 'tool_call'; name: 'query_order'; arguments: unknown }
+  >;
+};
+
 export class AgentOrchestrator {
   constructor(
     private readonly dependencies: {
@@ -23,6 +35,8 @@ export class AgentOrchestrator {
       traces: TraceRepository;
       handoffs: HandoffService;
       retriever: RetrievalService;
+      model?: ChatModel;
+      orderTool?: OrderTool;
     },
   ) {}
 
@@ -42,7 +56,7 @@ export class AgentOrchestrator {
       role: 'customer',
       content: input.message,
     });
-    this.dependencies.traces.createRun({
+    const run = this.dependencies.traces.createRun({
       conversationId: conversation.id,
       triggerMessageId: message.id,
       model: 'deepseek-v4-flash',
@@ -59,6 +73,41 @@ export class AgentOrchestrator {
       return;
     }
 
-    yield { type: 'failed', message: '智能客服模型尚未配置，已为你转接人工客服。' };
+    if (!this.dependencies.model) {
+      this.dependencies.handoffs.requestHumanHandoff(conversation.id, 'service_failure');
+      yield { type: 'handoff', reason: 'service_failure', message: '智能客服暂时不可用，已为你转接人工客服。' };
+      return;
+    }
+
+    try {
+      let response = await this.dependencies.model.respond({ question: input.message, evidence });
+      if (response.type === 'tool_call') {
+        if (!this.dependencies.orderTool) throw new Error('order tool unavailable');
+
+        const result = this.dependencies.orderTool.queryOrder(response.arguments);
+        this.dependencies.traces.recordToolCall({
+          runId: run.id,
+          name: response.name,
+          maskedArguments: JSON.stringify({ orderId: `${result.orderId.slice(0, 1)}***${result.orderId.slice(-1)}` }),
+          result: `${result.status}: ${result.summary}`,
+          status: 'succeeded',
+        });
+        yield { type: 'tool_call', name: response.name, status: 'succeeded' };
+        response = await this.dependencies.model.respond({ question: input.message, evidence, toolResult: result });
+      }
+      if (response.type !== 'answer') throw new Error('unexpected model response');
+
+      this.dependencies.conversations.appendMessage({
+        conversationId: conversation.id,
+        role: 'assistant',
+        content: response.content,
+      });
+      yield { type: 'token', text: response.content };
+      for (const item of evidence) yield { type: 'citation', sourceLabel: item.sourceLabel };
+      yield { type: 'completed' };
+    } catch {
+      this.dependencies.handoffs.requestHumanHandoff(conversation.id, 'service_failure');
+      yield { type: 'handoff', reason: 'service_failure', message: '智能客服暂时不可用，已为你转接人工客服。' };
+    }
   }
 }
