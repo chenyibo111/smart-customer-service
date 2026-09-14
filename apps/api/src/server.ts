@@ -10,11 +10,13 @@ import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
 import { createDatabase } from './db/database.js';
 import { migrate } from './db/migrate.js';
-import { seedDemoOrders } from './db/seed.js';
+import { seedDemoOrders, seedEvaluationCases } from './db/seed.js';
 import { HandoffService } from './domain/handoff-service.js';
+import { EvaluationRunner } from './evaluations/runner.js';
 import { LocalEmbeddingProvider } from './knowledge/embedder.js';
 import { Retriever } from './knowledge/retriever.js';
 import { ConversationRepository } from './repositories/conversation-repository.js';
+import { EvaluationRepository } from './repositories/evaluation-repository.js';
 import { KnowledgeRepository } from './repositories/knowledge-repository.js';
 import { TraceRepository } from './repositories/trace-repository.js';
 
@@ -25,17 +27,29 @@ mkdirSync(dirname(databasePath), { recursive: true });
 const database = createDatabase(databasePath);
 migrate(database);
 seedDemoOrders(database);
+seedEvaluationCases(database);
 
 const conversations = new ConversationRepository(database);
-const retriever = new Retriever(new KnowledgeRepository(database), new LocalEmbeddingProvider(), config.ragMinScore);
+const embeddingProvider = new LocalEmbeddingProvider();
+const retriever = new Retriever(new KnowledgeRepository(database), embeddingProvider, config.ragMinScore);
+const model = new DeepSeekClient({ apiKey: config.deepseekApiKey, baseUrl: config.deepseekBaseUrl, model: config.deepseekModel });
 const agent = new AgentOrchestrator({
   conversations,
   traces: new TraceRepository(database),
   handoffs: new HandoffService(database, conversations),
   retriever,
-  model: new DeepSeekClient({ apiKey: config.deepseekApiKey, baseUrl: config.deepseekBaseUrl, model: config.deepseekModel }),
+  model,
   orderTool: new OrderTool(database),
 });
-const app = buildApp({ database, agent, indexer: retriever });
+const evaluations = new EvaluationRunner({
+  repository: new EvaluationRepository(database),
+  createRealDependencies: async ({ database: evaluationDatabase }) => {
+    const evaluationRetriever = new Retriever(new KnowledgeRepository(evaluationDatabase), embeddingProvider, config.ragMinScore);
+    await evaluationRetriever.indexDocument({ title: '退款说明', markdown: '# 退款说明\n七日内可申请退款。' });
+    await evaluationRetriever.indexDocument({ title: '订单说明', markdown: '# 订单说明\n可使用订单号查询状态。' });
+    return { retriever: evaluationRetriever, model, orderTool: new OrderTool(evaluationDatabase) };
+  },
+});
+const app = buildApp({ database, agent, indexer: retriever, evaluations });
 
 await app.listen({ port: config.port, host: '127.0.0.1' });

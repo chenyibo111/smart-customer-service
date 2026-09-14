@@ -3,12 +3,15 @@ import { z } from 'zod';
 
 import type { KnowledgeRepository } from '../repositories/knowledge-repository.js';
 import type { ConversationRepository } from '../repositories/conversation-repository.js';
+import type { EvaluationRepository } from '../repositories/evaluation-repository.js';
 import type { TraceRepository } from '../repositories/trace-repository.js';
+import type { EvaluationRunner } from '../evaluations/runner.js';
 
 const documentInput = z.object({
   title: z.string().trim().min(1).max(200),
   markdown: z.string().trim().min(1).max(100_000),
 });
+const evaluationRunInput = z.object({ mode: z.enum(['offline', 'real']) });
 
 export type DocumentIndexer = {
   indexDocument(input: { title: string; markdown: string }): Promise<void>;
@@ -16,7 +19,14 @@ export type DocumentIndexer = {
 
 export async function registerAdminRoutes(
   app: FastifyInstance,
-  dependencies: { knowledge: KnowledgeRepository; conversations: ConversationRepository; traces: TraceRepository; indexer?: DocumentIndexer },
+  dependencies: {
+    knowledge: KnowledgeRepository;
+    conversations: ConversationRepository;
+    traces: TraceRepository;
+    indexer?: DocumentIndexer;
+    evaluations?: EvaluationRunner;
+    evaluationRepository: EvaluationRepository;
+  },
 ): Promise<void> {
   app.post('/api/admin/documents', async (request, reply) => {
     const parsed = documentInput.safeParse(request.body);
@@ -36,4 +46,21 @@ export async function registerAdminRoutes(
   app.get('/api/admin/conversations', async () => ({ conversations: dependencies.conversations.listRecent() }));
 
   app.get('/api/admin/conversations/:id/replay', async (request) => dependencies.traces.getReplay((request.params as { id: string }).id));
+
+  app.get('/api/admin/evaluations/cases', async () => ({ cases: dependencies.evaluationRepository.listCases() }));
+
+  app.post('/api/admin/evaluations/runs', async (request, reply) => {
+    const parsed = evaluationRunInput.safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ code: 'INVALID_REQUEST', message: '评估模式无效。' });
+    if (!dependencies.evaluations) return reply.code(503).send({ code: 'SERVICE_UNAVAILABLE', message: '评估中心暂时不可用。' });
+    return reply.code(201).send(await dependencies.evaluations.run(parsed.data.mode));
+  });
+
+  app.get('/api/admin/evaluations/runs', async () => ({ runs: dependencies.evaluationRepository.listRuns() }));
+
+  app.get('/api/admin/evaluations/runs/:id', async (request, reply) => {
+    const detail = dependencies.evaluationRepository.getRun((request.params as { id: string }).id);
+    if (!detail) return reply.code(404).send({ code: 'NOT_FOUND', message: '评估运行不存在。' });
+    return detail;
+  });
 }
