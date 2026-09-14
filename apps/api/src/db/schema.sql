@@ -82,3 +82,42 @@ CREATE TABLE IF NOT EXISTS demo_orders (
   status TEXT NOT NULL,
   summary TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS evaluation_cases (
+  id TEXT PRIMARY KEY,
+  fixture_version TEXT NOT NULL,
+  name TEXT NOT NULL,
+  question TEXT NOT NULL,
+  expected_outcome TEXT NOT NULL,
+  expected_source_label TEXT,
+  expected_tool_name TEXT,
+  expected_handoff_reason TEXT,
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS evaluation_runs (
+  id TEXT PRIMARY KEY,
+  mode TEXT NOT NULL,
+  status TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  completed_at TEXT,
+  total_count INTEGER NOT NULL DEFAULT 0,
+  pass_count INTEGER NOT NULL DEFAULT 0,
+  elapsed_ms INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS evaluation_results (
+  id TEXT PRIMARY KEY,
+  run_id TEXT NOT NULL REFERENCES evaluation_runs(id),
+  case_id TEXT NOT NULL REFERENCES evaluation_cases(id),
+  observed_outcome TEXT NOT NULL,
+  citation_labels_json TEXT NOT NULL,
+  tool_names_json TEXT NOT NULL,
+  handoff_reason TEXT,
+  answer_content TEXT,
+  elapsed_ms INTEGER NOT NULL,
+  passed INTEGER NOT NULL,
+  failure_reason TEXT,
+  created_at TEXT NOT NULL,
+  UNIQUE(run_id, case_id)
+);

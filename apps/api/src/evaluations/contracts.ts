@@ -28,3 +28,31 @@ export type EvaluationExpectation = Pick<
 >;
 
 export type EvaluationScore = { passed: boolean; failureReason: string | null };
+
+export type EvaluationRun = {
+  id: string;
+  mode: EvaluationMode;
+  status: 'running' | 'completed';
+  startedAt: string;
+  completedAt: string | null;
+  totalCount: number;
+  passCount: number;
+  elapsedMs: number | null;
+};
+
+export type EvaluationResult = EvaluationObservation & {
+  id: string;
+  runId: string;
+  caseId: string;
+  name: string;
+  question: string;
+  expectedOutcome: EvaluationCase['expectedOutcome'];
+  expectedSourceLabel: string | null;
+  expectedToolName: string | null;
+  expectedHandoffReason: HandoffReason | null;
+  elapsedMs: number;
+  passed: boolean;
+  createdAt: string;
+};
+
+export type EvaluationRunDetail = { run: EvaluationRun; results: EvaluationResult[] };
