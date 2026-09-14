@@ -34,5 +34,25 @@ button.secondary { color: #2f65d9; background: #e5eeff; }
 .document-list span, .trace-item span { color: #597049; font-size: .8rem; }
 .trace-item { flex-wrap: wrap; }
 .trace-item code { width: 100%; color: #63708a; font-size: .8rem; }
+.evaluation-center { display: grid; gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #dbe3f0; }
+.evaluation-heading, .evaluation-actions, .evaluation-summary, .evaluation-result-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.evaluation-heading h2, .evaluation-layout h3 { margin: .2rem 0; }
+.evaluation-heading p, .evaluation-hint, .evaluation-result p, .evaluation-result dd { margin: 0; color: #63708a; }
+.evaluation-case-count { padding: .35rem .6rem; border-radius: 999px; color: #2f65d9; background: #e5eeff; font-size: .8rem; font-weight: 700; white-space: nowrap; }
+.evaluation-actions { justify-content: flex-start; flex-wrap: wrap; }
+.evaluation-hint { font-size: .86rem; }
+.evaluation-layout { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(0, 1.3fr); gap: 1rem; }
+.evaluation-run-list, .evaluation-results { display: grid; gap: .65rem; margin: .65rem 0 0; padding: 0; list-style: none; }
+.evaluation-run-list button { display: flex; width: 100%; align-items: start; justify-content: space-between; gap: .5rem; text-align: left; }
+.evaluation-run-list button span:last-child { color: #63708a; font-size: .78rem; font-weight: 600; }
+.evaluation-summary { padding: .75rem; border-radius: 10px; background: #edf3ff; }
+.evaluation-result { display: grid; gap: .55rem; padding: .85rem; border: 1px solid #dbe3f0; border-left-width: 4px; border-radius: 10px; }
+.evaluation-result.passed { border-left-color: #3d9b64; }
+.evaluation-result.failed { border-left-color: #d64d58; }
+.evaluation-result-heading span { font-size: .82rem; font-weight: 800; }
+.evaluation-result.passed .evaluation-result-heading span { color: #24834d; }
+.evaluation-result.failed .evaluation-result-heading span, .evaluation-failure { color: #b53743 !important; }
+.evaluation-result dl { display: grid; grid-template-columns: auto 1fr; gap: .35rem .7rem; margin: 0; font-size: .86rem; }
+.evaluation-result dt { color: #45526b; font-weight: 800; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 @media (max-width: 700px) { .workspace { width: calc(100% - 1rem); margin: .5rem auto; padding: 1.25rem; border-radius: 14px; } .admin-grid { grid-template-columns: 1fr; } .chat-composer { align-items: stretch; flex-direction: column; } .message { max-width: 93%; } }
