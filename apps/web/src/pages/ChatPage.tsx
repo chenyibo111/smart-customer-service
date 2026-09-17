@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { SpinnerIcon } from '@chenyibo111/icons';
-import { Alert, Button } from '@chenyibo111/ui';
+import { Button, Spinner } from '@chenyibo111/ui';
 
 import { customerApi, type CustomerApi } from '../app/api.js';
 import { ChatComposer } from '../components/ChatComposer.js';
+import { FeedbackAlert, type FeedbackNotice } from '../components/FeedbackAlert.js';
 import { MessageList, type ChatMessage } from '../components/MessageList.js';
 
 function visitorId(): string {
@@ -19,7 +19,7 @@ export function ChatPage({ client = customerApi }: { client?: CustomerApi }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streaming, setStreaming] = useState(false);
   const [handoff, setHandoff] = useState(false);
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<FeedbackNotice | null>(null);
   const canSend = useMemo(() => !streaming && !handoff && Boolean(conversationId), [conversationId, handoff, streaming]);
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function ChatPage({ client = customerApi }: { client?: CustomerApi }) {
     void client.createConversation(visitorId()).then((conversation) => {
       sessionStorage.setItem('smart-cs-conversation-id', conversation.id);
       setConversationId(conversation.id);
-    }).catch(() => setNotice('暂时无法创建会话，请刷新页面重试。'));
+    }).catch(() => setNotice({ message: '暂时无法创建会话，请刷新页面重试。', variant: 'destructive' }));
   }, [client, conversationId]);
 
   const requestHandoff = async () => {
@@ -35,9 +35,9 @@ export function ChatPage({ client = customerApi }: { client?: CustomerApi }) {
     try {
       await client.handoff(conversationId);
       setHandoff(true);
-      setNotice('已转人工，正在等待客服接管。');
+      setNotice({ message: '已转人工，正在等待客服接管。', variant: 'success' });
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : '转人工失败，请稍后重试。');
+      setNotice({ message: error instanceof Error ? error.message : '转人工失败，请稍后重试。', variant: 'destructive' });
     }
   };
 
@@ -57,13 +57,13 @@ export function ChatPage({ client = customerApi }: { client?: CustomerApi }) {
           });
         } else if (event.type === 'handoff') {
           setHandoff(true);
-          setNotice(event.message);
+          setNotice({ message: event.message, variant: 'info' });
         } else if (event.type === 'failed') {
-          setNotice(event.message);
+          setNotice({ message: event.message, variant: 'destructive' });
         }
       }
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : '暂时无法处理，请转人工。');
+      setNotice({ message: error instanceof Error ? error.message : '暂时无法处理，请转人工。', variant: 'destructive' });
     } finally {
       setStreaming(false);
     }
@@ -73,8 +73,8 @@ export function ChatPage({ client = customerApi }: { client?: CustomerApi }) {
     <main className="workspace chat-workspace">
       <header className="workspace-header"><span className="eyebrow">智能客服演示</span><h1>有什么可以帮你？</h1><p>基于本地知识库回答；不确定时会为你转接人工。</p></header>
       <MessageList messages={messages} />
-      {notice && <Alert className="notice" variant="info" role="status">{notice}</Alert>}
-      <div className="chat-actions"><Button type="button" variant="secondary" onClick={() => void requestHandoff()} disabled={!conversationId || handoff}>转人工</Button><span className="chat-status">{streaming && <SpinnerIcon aria-hidden="true" size={16} />}{handoff ? '人工队列中' : streaming ? '正在思考…' : 'AI 在线'}</span></div>
+      <FeedbackAlert notice={notice} />
+      <div className="chat-actions"><Button type="button" variant="secondary" onClick={() => void requestHandoff()} disabled={!conversationId || handoff}>转人工</Button><span className="chat-status">{streaming && <Spinner className="chat-spinner" label="正在思考" />}{handoff ? '人工队列中' : streaming ? '正在思考…' : 'AI 在线'}</span></div>
       <ChatComposer disabled={!canSend} onSend={send} />
     </main>
   );

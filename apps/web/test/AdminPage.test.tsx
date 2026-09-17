@@ -78,6 +78,8 @@ describe('AdminPage', () => {
     await user.type(screen.getByRole('textbox', { name: 'Markdown 内容' }), '# 退款\\n七日内可申请退款。');
     await user.click(screen.getByRole('button', { name: '导入并索引' }));
 
-    expect(await screen.findByRole('status')).toHaveTextContent('知识索引失败，请检查本地模型下载网络后重试。');
+    expect(await screen.findByRole('alert')).toHaveTextContent('知识索引失败，请检查本地模型下载网络后重试。');
+    expect(screen.getByRole('textbox', { name: '知识标题' })).toHaveValue('退款说明');
+    expect(screen.getByRole('textbox', { name: 'Markdown 内容' })).toHaveValue('# 退款\\n七日内可申请退款。');
   });
 });

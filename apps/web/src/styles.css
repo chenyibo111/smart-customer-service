@@ -14,26 +14,27 @@ body { min-width: 320px; min-height: 100vh; margin: 0; background: radial-gradie
 .message p { margin: 0; line-height: 1.55; white-space: pre-wrap; }
 .citation { display: inline-block; margin-top: .65rem; padding: .2rem .5rem; border-radius: 999px; color: var(--yb-muted-foreground); background: var(--yb-secondary); font-size: .75rem; }
 .chat-composer { display: flex; gap: .75rem; align-items: end; margin-top: 1rem; }
+.resize-none { resize: none; }
 .chat-composer-textarea { min-height: 68px; }
 .chat-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; color: var(--yb-muted-foreground); font-size: .9rem; }
 .chat-status { display: inline-flex; align-items: center; gap: .35rem; }
-.chat-status svg { animation: yb-spin 800ms linear infinite; }
+.chat-spinner { flex: none; }
 .notice { margin: 1rem 0; }
 .empty-state { color: var(--yb-muted-foreground); }
 .ticket-queue, .active-ticket, .document-uploader, .trace-timeline { display: grid; gap: 1rem; }
-.ticket .yb-card-content { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.ticket .yb-card-content > div { display: grid; gap: .35rem; }
+.ticket-content { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.ticket-content > div { display: grid; gap: .35rem; }
 .ticket p { margin: 0; color: var(--yb-muted-foreground); }
-.active-ticket .yb-card-content { display: grid; gap: 1rem; }
+.active-ticket-content { display: grid; gap: 1rem; }
 .active-ticket form { display: grid; gap: .75rem; }
 .context-loading { display: flex; align-items: center; gap: .5rem; color: var(--yb-muted-foreground); }
 .active-ticket h2, .document-uploader h2, .trace-timeline h2 { margin: 0; }
 .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 .document-list { display: grid; gap: .6rem; padding: 0; list-style: none; }
 .document-list li { list-style: none; }
-.document-row, .trace-item .yb-card-content { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
-.document-list span, .trace-item span { color: var(--yb-success); font-size: .8rem; }
-.trace-item .yb-card-content { flex-wrap: wrap; }
+.document-row, .trace-content { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.document-list span, .trace-content span { color: var(--yb-success); font-size: .8rem; }
+.trace-content { flex-wrap: wrap; }
 .trace-item code { width: 100%; color: #63708a; font-size: .8rem; }
 .evaluation-center { display: grid; gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #dbe3f0; }
 .evaluation-heading, .evaluation-actions, .evaluation-summary, .evaluation-result-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
@@ -47,7 +48,7 @@ body { min-width: 320px; min-height: 100vh; margin: 0; background: radial-gradie
 .evaluation-run-list button { display: flex; width: 100%; align-items: start; justify-content: space-between; gap: .5rem; text-align: left; }
 .evaluation-run-list button span:last-child { color: #63708a; font-size: .78rem; font-weight: 600; }
 .evaluation-summary { background: #edf3ff; }
-.evaluation-summary .yb-card-content { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .75rem; }
+.evaluation-summary-content { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .75rem; }
 .evaluation-result { display: grid; gap: .55rem; padding: .85rem; border: 1px solid #dbe3f0; border-left-width: 4px; border-radius: 10px; }
 .evaluation-result.passed { border-left-color: #3d9b64; }
 .evaluation-result.failed { border-left-color: #d64d58; }

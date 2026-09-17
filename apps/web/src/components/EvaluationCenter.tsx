@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Alert, Badge, Button, Card, CardContent, Empty } from '@chenyibo111/ui';
+import { Badge, Button, Card, CardContent, Empty } from '@chenyibo111/ui';
 
 import type { AdminApi, EvaluationRun, EvaluationRunDetail } from '../app/api.js';
+import { FeedbackAlert, type FeedbackNotice } from './FeedbackAlert.js';
 
 const outcomeLabels = { answer: '回答', handoff: '转人工', failed: '失败' };
 
@@ -15,14 +16,14 @@ export function EvaluationCenter({ client }: { client: AdminApi }) {
   const [runs, setRuns] = useState<EvaluationRun[]>([]);
   const [detail, setDetail] = useState<EvaluationRunDetail | null>(null);
   const [running, setRunning] = useState(false);
-  const [notice, setNotice] = useState('');
+  const [notice, setNotice] = useState<FeedbackNotice | null>(null);
 
   const selectRun = async (runId: string) => {
     try {
       setDetail(await client.getEvaluationRun(runId));
-      setNotice('');
+      setNotice(null);
     } catch {
-      setNotice('无法加载评估结果。');
+      setNotice({ message: '无法加载评估结果。', variant: 'destructive' });
     }
   };
 
@@ -34,7 +35,7 @@ export function EvaluationCenter({ client }: { client: AdminApi }) {
         setRuns(history);
         if (history[0]) await selectRun(history[0].id);
       } catch {
-        setNotice('无法加载评估中心。');
+        setNotice({ message: '无法加载评估中心。', variant: 'destructive' });
       }
     };
     void load();
@@ -42,13 +43,13 @@ export function EvaluationCenter({ client }: { client: AdminApi }) {
 
   const start = async (mode: 'offline' | 'real') => {
     setRunning(true);
-    setNotice('');
+    setNotice(null);
     try {
       const next = await client.runEvaluation(mode);
       setDetail(next);
       setRuns((current) => [next.run, ...current.filter((run) => run.id !== next.run.id)]);
     } catch {
-      setNotice('评估运行失败，请稍后重试。');
+      setNotice({ message: '评估运行失败，请稍后重试。', variant: 'destructive' });
     } finally {
       setRunning(false);
     }
@@ -64,7 +65,7 @@ export function EvaluationCenter({ client }: { client: AdminApi }) {
       <Button variant="secondary" onClick={() => void start('real')} disabled={running}>运行真实 DeepSeek 评估</Button>
     </div>
     <p className="evaluation-hint">离线模式为确定性执行，不会调用模型。真实模式会调用 DeepSeek，可能消耗额度。</p>
-    {notice && <Alert className="notice" variant="info" role="status">{notice}</Alert>}
+    <FeedbackAlert notice={notice} />
     <div className="evaluation-layout">
       <section>
         <h3>运行历史</h3>
@@ -73,7 +74,7 @@ export function EvaluationCenter({ client }: { client: AdminApi }) {
       <section className="evaluation-detail">
         <h3>结果明细</h3>
         {detail === null ? <Empty title="选择或运行一次评估以查看结果。" /> : <>
-          <Card className="evaluation-summary"><CardContent><strong>{detail.run.mode === 'offline' ? '离线评估' : '真实 DeepSeek 评估'}</strong><RunSummary run={detail.run} /></CardContent></Card>
+          <Card className="evaluation-summary"><CardContent className="evaluation-summary-content"><strong>{detail.run.mode === 'offline' ? '离线评估' : '真实 DeepSeek 评估'}</strong><RunSummary run={detail.run} /></CardContent></Card>
           <ul className="evaluation-results">{detail.results.map((result) => <li key={result.id} className={result.passed ? 'evaluation-result passed' : 'evaluation-result failed'}>
             <div className="evaluation-result-heading"><strong>{result.name}</strong><span>{result.passed ? '通过' : '失败'}</span></div>
             <p>问题：{result.question}</p>
