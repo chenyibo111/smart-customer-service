@@ -47,6 +47,27 @@ describe('AgentOrchestrator', () => {
     expect(conversations.getById(conversation.id)).toMatchObject({ status: 'waiting_human', controller: 'human' });
   });
 
+  it('hands an explicit request for a person to a human before retrieval', async () => {
+    const conversations = new ConversationRepository(database);
+    const conversation = conversations.create('visitor-human-request');
+    const retriever: RetrievalService = { search: async () => { throw new Error('retrieval should not run'); } };
+    const orchestrator = new AgentOrchestrator({
+      conversations,
+      traces: new TraceRepository(database),
+      handoffs: new HandoffService(database, conversations),
+      retriever,
+    });
+
+    const events = await collect(orchestrator.respond({ conversationId: conversation.id, message: '请转人工客服。' }));
+
+    expect(events).toEqual([
+      expect.objectContaining({ type: 'handoff', reason: 'customer_requested' }),
+    ]);
+    expect(conversations.listMessages(conversation.id)).toEqual([
+      expect.objectContaining({ role: 'customer', content: '请转人工客服。' }),
+    ]);
+  });
+
   it('persists and streams an answer with the retrieval source', async () => {
     const conversations = new ConversationRepository(database);
     const conversation = conversations.create('visitor-2');

@@ -28,6 +28,10 @@ export type ChatModel = {
   >;
 };
 
+export function isExplicitHumanRequest(message: string): boolean {
+  return /(转人工|人工客服|找客服|联系客服)/.test(message);
+}
+
 export class AgentOrchestrator {
   constructor(
     private readonly dependencies: {
@@ -56,6 +60,15 @@ export class AgentOrchestrator {
       role: 'customer',
       content: input.message,
     });
+    if (isExplicitHumanRequest(input.message)) {
+      this.dependencies.handoffs.requestHumanHandoff(conversation.id, 'customer_requested');
+      yield {
+        type: 'handoff',
+        reason: 'customer_requested',
+        message: '已为你转接人工客服。',
+      };
+      return;
+    }
     const run = this.dependencies.traces.createRun({
       conversationId: conversation.id,
       triggerMessageId: message.id,

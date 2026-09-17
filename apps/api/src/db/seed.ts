@@ -1,5 +1,7 @@
 import type { AppDatabase } from './database.js';
 
+export { seedEvaluationCases } from '../evaluations/fixtures.js';
+
 export function seedDemoOrders(database: AppDatabase): void {
   const insert = database.prepare(
     'INSERT OR REPLACE INTO demo_orders (id, status, summary) VALUES (?, ?, ?)',

@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../src/app.js';
 import { createDatabase, type AppDatabase } from '../src/db/database.js';
 import { migrate } from '../src/db/migrate.js';
+import { seedEvaluationCases } from '../src/db/seed.js';
+import { EvaluationRunner } from '../src/evaluations/runner.js';
 import { Retriever } from '../src/knowledge/retriever.js';
+import { EvaluationRepository } from '../src/repositories/evaluation-repository.js';
 import { KnowledgeRepository } from '../src/repositories/knowledge-repository.js';
 
 describe('HTTP API', () => {
@@ -144,6 +147,46 @@ describe('HTTP API', () => {
     expect(conversations.json().conversations).toEqual([
       expect.objectContaining({ id: conversationId, visitorId: 'visitor-context', status: 'human_active' }),
     ]);
+    await app.close();
+  });
+
+  it('runs the offline evaluation batch and returns persisted detail', async () => {
+    seedEvaluationCases(database);
+    const app = buildApp({
+      database,
+      evaluations: new EvaluationRunner({ repository: new EvaluationRepository(database) }),
+    });
+
+    const cases = await app.inject({ method: 'GET', url: '/api/admin/evaluations/cases' });
+    const started = await app.inject({ method: 'POST', url: '/api/admin/evaluations/runs', payload: { mode: 'offline' } });
+    const runId = started.json().run.id as string;
+    const history = await app.inject({ method: 'GET', url: '/api/admin/evaluations/runs' });
+    const detail = await app.inject({ method: 'GET', url: `/api/admin/evaluations/runs/${runId}` });
+
+    expect(cases.json().cases).toHaveLength(6);
+    expect(started.statusCode).toBe(201);
+    expect(started.json()).toMatchObject({ run: { mode: 'offline', totalCount: 6, passCount: 6 } });
+    expect(history.json().runs).toEqual([expect.objectContaining({ id: runId, passCount: 6 })]);
+    expect(detail.json().results).toEqual(expect.arrayContaining([
+      expect.objectContaining({ caseId: 'valid-order-a1001', toolNames: ['query_order'], passed: true }),
+    ]));
+    await app.close();
+  });
+
+  it('rejects an unsupported evaluation mode and reports a missing run safely', async () => {
+    seedEvaluationCases(database);
+    const app = buildApp({
+      database,
+      evaluations: new EvaluationRunner({ repository: new EvaluationRepository(database) }),
+    });
+
+    const invalid = await app.inject({ method: 'POST', url: '/api/admin/evaluations/runs', payload: { mode: 'preview' } });
+    const missing = await app.inject({ method: 'GET', url: '/api/admin/evaluations/runs/missing-run' });
+
+    expect(invalid).toMatchObject({ statusCode: 400 });
+    expect(invalid.json()).toEqual({ code: 'INVALID_REQUEST', message: '评估模式无效。' });
+    expect(missing).toMatchObject({ statusCode: 404 });
+    expect(missing.json()).toEqual({ code: 'NOT_FOUND', message: '评估运行不存在。' });
     await app.close();
   });
 });

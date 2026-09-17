@@ -72,11 +72,49 @@ export const staffApi: StaffApi = {
 
 export type KnowledgeDocument = { id: string; title: string; indexStatus: string };
 export type Replay = { messages: ConversationMessage[]; toolCalls: Array<{ id: string; name: string; maskedArguments: string; status: string }> };
+export type EvaluationCase = {
+  id: string;
+  name: string;
+  question: string;
+  expectedOutcome: 'answer' | 'handoff';
+  expectedSourceLabel: string | null;
+  expectedToolName: string | null;
+  expectedHandoffReason: string | null;
+};
+export type EvaluationRun = {
+  id: string;
+  mode: 'offline' | 'real';
+  status: 'running' | 'completed';
+  startedAt: string;
+  completedAt: string | null;
+  totalCount: number;
+  passCount: number;
+  elapsedMs: number | null;
+};
+export type EvaluationResult = EvaluationCase & {
+  id: string;
+  runId: string;
+  caseId: string;
+  outcome: 'answer' | 'handoff' | 'failed';
+  citationLabels: string[];
+  toolNames: string[];
+  handoffReason: string | null;
+  answerContent: string | null;
+  elapsedMs: number;
+  passed: boolean;
+  failureReason: string | null;
+  createdAt: string;
+};
+export type EvaluationRunDetail = { run: EvaluationRun; results: EvaluationResult[] };
 export type AdminApi = {
   listDocuments(): Promise<KnowledgeDocument[]>;
   listConversations(): Promise<Conversation[]>;
   importDocument(input: { title: string; markdown: string }): Promise<void>;
   getReplay(conversationId: string): Promise<Replay>;
+  listEvaluationCases(): Promise<EvaluationCase[]>;
+  runEvaluation(mode: 'offline' | 'real'): Promise<EvaluationRunDetail>;
+  listEvaluationRuns(): Promise<EvaluationRun[]>;
+  getEvaluationRun(runId: string): Promise<EvaluationRunDetail>;
 };
 
 export const adminApi: AdminApi = {
@@ -98,5 +136,25 @@ export const adminApi: AdminApi = {
     const response = await fetch(`/api/admin/conversations/${conversationId}/replay`);
     if (!response.ok) throw new Error('无法加载回放。');
     return await response.json() as Replay;
+  },
+  async listEvaluationCases() {
+    const response = await fetch('/api/admin/evaluations/cases');
+    if (!response.ok) throw new Error('无法加载评估用例。');
+    return (await response.json() as { cases: EvaluationCase[] }).cases;
+  },
+  async runEvaluation(mode) {
+    const response = await jsonRequest('/api/admin/evaluations/runs', { mode });
+    if (!response.ok) throw new Error('评估运行失败。');
+    return await response.json() as EvaluationRunDetail;
+  },
+  async listEvaluationRuns() {
+    const response = await fetch('/api/admin/evaluations/runs');
+    if (!response.ok) throw new Error('无法加载评估历史。');
+    return (await response.json() as { runs: EvaluationRun[] }).runs;
+  },
+  async getEvaluationRun(runId) {
+    const response = await fetch(`/api/admin/evaluations/runs/${runId}`);
+    if (!response.ok) throw new Error('无法加载评估结果。');
+    return await response.json() as EvaluationRunDetail;
   },
 };
