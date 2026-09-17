@@ -16,6 +16,8 @@ body { min-width: 320px; min-height: 100vh; margin: 0; background: radial-gradie
 .chat-composer { display: flex; gap: .75rem; align-items: end; margin-top: 1rem; }
 .chat-composer-textarea { min-height: 68px; }
 .chat-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; color: var(--yb-muted-foreground); font-size: .9rem; }
+.chat-status { display: inline-flex; align-items: center; gap: .35rem; }
+.chat-status svg { animation: yb-spin 800ms linear infinite; }
 .notice { margin: 1rem 0; }
 .empty-state { color: var(--yb-muted-foreground); }
 .ticket-queue, .active-ticket, .document-uploader, .trace-timeline { display: grid; gap: 1rem; }
