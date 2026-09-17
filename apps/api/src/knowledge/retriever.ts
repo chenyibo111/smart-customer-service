@@ -35,7 +35,7 @@ export class Retriever {
     const document = this.repository.createDocument({ title: input.title, content: input.markdown });
     const chunks = chunkMarkdown(document.id, input.markdown);
     const embeddings = await this.embedder.embed(chunks.map((chunk) => chunk.content));
-    this.repository.insertChunks(chunks.map((chunk, index) => ({ ...chunk, embedding: embeddings[index]! })));
+    this.repository.storeDocument(document, chunks.map((chunk, index) => ({ ...chunk, embedding: embeddings[index]! })));
   }
 
   async search(query: string, limit: number): Promise<RetrievedChunk[]> {

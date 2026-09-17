@@ -59,4 +59,25 @@ describe('AdminPage', () => {
     expect(await screen.findByText(/6 \/ 6 通过/, { selector: '.evaluation-summary span' })).toBeInTheDocument();
     expect(screen.getByText(/离线模式为确定性执行，不会调用模型。/, { selector: '.evaluation-hint' })).toBeInTheDocument();
   });
+
+  it('shows the safe indexing failure returned by the API', async () => {
+    const user = userEvent.setup();
+    const client = {
+      listDocuments: async () => [],
+      listConversations: async () => [],
+      importDocument: async () => { throw new Error('知识索引失败，请检查本地模型下载网络后重试。'); },
+      getReplay: async () => ({ messages: [], toolCalls: [] }),
+      listEvaluationCases: async () => [],
+      listEvaluationRuns: async () => [],
+      runEvaluation: async () => ({ run: { id: 'run-empty', mode: 'offline' as const, status: 'completed' as const, startedAt: '', completedAt: '', totalCount: 0, passCount: 0, elapsedMs: 0 }, results: [] }),
+      getEvaluationRun: async () => ({ run: { id: 'run-empty', mode: 'offline' as const, status: 'completed' as const, startedAt: '', completedAt: '', totalCount: 0, passCount: 0, elapsedMs: 0 }, results: [] }),
+    };
+    render(<AdminPage client={client} />);
+
+    await user.type(screen.getByRole('textbox', { name: '知识标题' }), '退款说明');
+    await user.type(screen.getByRole('textbox', { name: 'Markdown 内容' }), '# 退款\\n七日内可申请退款。');
+    await user.click(screen.getByRole('button', { name: '导入并索引' }));
+
+    expect(await screen.findByRole('status')).toHaveTextContent('知识索引失败，请检查本地模型下载网络后重试。');
+  });
 });

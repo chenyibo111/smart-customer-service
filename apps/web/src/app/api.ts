@@ -125,7 +125,10 @@ export const adminApi: AdminApi = {
   },
   async importDocument(input) {
     const response = await jsonRequest('/api/admin/documents', input);
-    if (!response.ok) throw new Error('知识导入失败。');
+    if (!response.ok) {
+      const error = await response.json().catch(() => null) as { message?: unknown } | null;
+      throw new Error(typeof error?.message === 'string' ? error.message : '知识导入失败。');
+    }
   },
   async listConversations() {
     const response = await fetch('/api/admin/conversations');

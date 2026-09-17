@@ -37,7 +37,7 @@ export async function registerAdminRoutes(
       await dependencies.indexer.indexDocument(parsed.data);
       return reply.code(201).send({ ok: true });
     } catch {
-      return reply.code(503).send({ code: 'SERVICE_UNAVAILABLE', message: '知识库暂时不可用。' });
+      return reply.code(503).send({ code: 'INDEXING_FAILED', message: '知识索引失败，请检查本地模型下载网络后重试。' });
     }
   });
 

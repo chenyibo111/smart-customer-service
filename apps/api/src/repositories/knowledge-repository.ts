@@ -24,7 +24,7 @@ export class KnowledgeRepository {
   constructor(private readonly database: AppDatabase) {}
 
   createDocument(input: { title: string; content: string }): KnowledgeDocument {
-    const document: KnowledgeDocument = {
+    return {
       id: randomUUID(),
       title: input.title,
       sourceLabel: input.title,
@@ -32,10 +32,6 @@ export class KnowledgeRepository {
       indexStatus: 'indexed',
       createdAt: new Date().toISOString(),
     };
-    this.database
-      .prepare('INSERT INTO knowledge_documents (id, title, source_label, content, index_status, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(document.id, document.title, document.sourceLabel, document.content, document.indexStatus, document.createdAt);
-    return document;
   }
 
   listDocuments(): KnowledgeDocument[] {
@@ -52,11 +48,13 @@ export class KnowledgeRepository {
       }));
   }
 
-  insertChunks(chunks: Array<{ id: string; documentId: string; content: string; embedding: number[] }>): void {
-    const insert = this.database.prepare('INSERT INTO knowledge_chunks (id, document_id, content, embedding_json, created_at) VALUES (?, ?, ?, ?, ?)');
+  storeDocument(document: KnowledgeDocument, chunks: Array<{ id: string; documentId: string; content: string; embedding: number[] }>): void {
+    const insertDocument = this.database.prepare('INSERT INTO knowledge_documents (id, title, source_label, content, index_status, created_at) VALUES (?, ?, ?, ?, ?, ?)');
+    const insertChunk = this.database.prepare('INSERT INTO knowledge_chunks (id, document_id, content, embedding_json, created_at) VALUES (?, ?, ?, ?, ?)');
     const now = new Date().toISOString();
     const transaction = this.database.transaction(() => {
-      for (const chunk of chunks) insert.run(chunk.id, chunk.documentId, chunk.content, JSON.stringify(chunk.embedding), now);
+      insertDocument.run(document.id, document.title, document.sourceLabel, document.content, document.indexStatus, document.createdAt);
+      for (const chunk of chunks) insertChunk.run(chunk.id, chunk.documentId, chunk.content, JSON.stringify(chunk.embedding), now);
     });
     transaction();
   }

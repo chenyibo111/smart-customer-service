@@ -118,6 +118,27 @@ describe('HTTP API', () => {
     await app.close();
   });
 
+  it('does not retain an admin document when embedding fails', async () => {
+    const indexer = new Retriever(
+      new KnowledgeRepository(database),
+      { embed: async () => { throw new Error('embedding model is unavailable'); } },
+      0.5,
+    );
+    const app = buildApp({ database, indexer });
+
+    const imported = await app.inject({
+      method: 'POST',
+      url: '/api/admin/documents',
+      payload: { title: '退款说明', markdown: '# 退款\n七日内可申请退款。' },
+    });
+    const documents = await app.inject({ method: 'GET', url: '/api/admin/documents' });
+
+    expect(imported.statusCode).toBe(503);
+    expect(imported.json()).toEqual({ code: 'INDEXING_FAILED', message: '知识索引失败，请检查本地模型下载网络后重试。' });
+    expect(documents.json().documents).toEqual([]);
+    await app.close();
+  });
+
   it('returns the selected ticket context and lists real conversations for replay', async () => {
     const app = buildApp({ database });
     const created = await app.inject({ method: 'POST', url: '/api/conversations', payload: { visitorId: 'visitor-context' } });
