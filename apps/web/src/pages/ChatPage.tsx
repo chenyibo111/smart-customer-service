@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { SpinnerIcon } from '@chenyibo111/icons';
+import { Alert, Button } from '@chenyibo111/ui';
 
 import { customerApi, type CustomerApi } from '../app/api.js';
 import { ChatComposer } from '../components/ChatComposer.js';
@@ -71,8 +73,8 @@ export function ChatPage({ client = customerApi }: { client?: CustomerApi }) {
     <main className="workspace chat-workspace">
       <header className="workspace-header"><span className="eyebrow">智能客服演示</span><h1>有什么可以帮你？</h1><p>基于本地知识库回答；不确定时会为你转接人工。</p></header>
       <MessageList messages={messages} />
-      {notice && <p className="notice" role="status">{notice}</p>}
-      <div className="chat-actions"><button type="button" className="secondary" onClick={() => void requestHandoff()} disabled={!conversationId || handoff}>转人工</button><span>{handoff ? '人工队列中' : streaming ? '正在思考…' : 'AI 在线'}</span></div>
+      {notice && <Alert className="notice" variant="info" role="status">{notice}</Alert>}
+      <div className="chat-actions"><Button type="button" variant="secondary" onClick={() => void requestHandoff()} disabled={!conversationId || handoff}>转人工</Button><span className="chat-status">{streaming && <SpinnerIcon aria-hidden="true" size={16} />}{handoff ? '人工队列中' : streaming ? '正在思考…' : 'AI 在线'}</span></div>
       <ChatComposer disabled={!canSend} onSend={send} />
     </main>
   );
