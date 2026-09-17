@@ -19,9 +19,12 @@ body { min-width: 320px; min-height: 100vh; margin: 0; background: radial-gradie
 .notice { margin: 1rem 0; }
 .empty-state { color: var(--yb-muted-foreground); }
 .ticket-queue, .active-ticket, .document-uploader, .trace-timeline { display: grid; gap: 1rem; }
-.ticket { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid #dbe3f0; border-radius: 12px; }
-.ticket p { margin: .3rem 0 0; color: #63708a; }
-.active-ticket { padding: 1rem; border: 1px solid #dbe3f0; border-radius: 12px; }
+.ticket .yb-card-content { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.ticket .yb-card-content > div { display: grid; gap: .35rem; }
+.ticket p { margin: 0; color: var(--yb-muted-foreground); }
+.active-ticket .yb-card-content { display: grid; gap: 1rem; }
+.active-ticket form { display: grid; gap: .75rem; }
+.context-loading { display: flex; align-items: center; gap: .5rem; color: var(--yb-muted-foreground); }
 .active-ticket h2, .document-uploader h2, .trace-timeline h2 { margin: 0; }
 .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 .document-list { display: grid; gap: .6rem; padding: 0; list-style: none; }
