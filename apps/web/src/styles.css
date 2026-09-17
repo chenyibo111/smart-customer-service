@@ -28,9 +28,10 @@ body { min-width: 320px; min-height: 100vh; margin: 0; background: radial-gradie
 .active-ticket h2, .document-uploader h2, .trace-timeline h2 { margin: 0; }
 .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 .document-list { display: grid; gap: .6rem; padding: 0; list-style: none; }
-.document-list li, .trace-item { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .75rem; border-radius: 10px; background: #f2f5fa; }
-.document-list span, .trace-item span { color: #597049; font-size: .8rem; }
-.trace-item { flex-wrap: wrap; }
+.document-list li { list-style: none; }
+.document-row, .trace-item .yb-card-content { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.document-list span, .trace-item span { color: var(--yb-success); font-size: .8rem; }
+.trace-item .yb-card-content { flex-wrap: wrap; }
 .trace-item code { width: 100%; color: #63708a; font-size: .8rem; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 @media (max-width: 700px) { .workspace { width: calc(100% - 1rem); margin: .5rem auto; padding: 1.25rem; border-radius: 14px; } .admin-grid { grid-template-columns: 1fr; } .chat-composer { align-items: stretch; flex-direction: column; } .message { max-width: 93%; } }
