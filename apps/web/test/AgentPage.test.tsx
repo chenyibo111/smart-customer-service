@@ -28,4 +28,26 @@ describe('AgentPage', () => {
     await user.click(screen.getByRole('button', { name: '发送回复' }));
     expect(await screen.findByText('退款预计 1 到 3 个工作日到账。')).toBeInTheDocument();
   });
+
+  it('keeps a ticket open and retryable when closing it fails', async () => {
+    const client = {
+      listTickets: async () => [{ id: 'ticket-1', reason: 'customer_requested', status: 'open' }],
+      claimTicket: async () => ({ conversation: { status: 'human_active' }, ticket: { id: 'ticket-1', status: 'claimed' } }),
+      getTicketContext: async () => ({
+        ticket: { id: 'ticket-1', conversationId: 'conversation-1', status: 'claimed' },
+        conversation: { id: 'conversation-1', status: 'human_active' },
+        messages: [],
+      }),
+      sendMessage: async (_ticketId: string, content: string) => ({ id: 'message-2', role: 'agent', content }),
+      closeTicket: async () => { throw new Error('关闭工单失败，请重试。'); },
+    };
+    const user = userEvent.setup();
+    render(<AgentPage client={client} />);
+
+    await user.click(await screen.findByRole('button', { name: '接管' }));
+    await user.click(await screen.findByRole('button', { name: '关闭工单' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('关闭工单失败，请重试。');
+    expect(screen.getByRole('button', { name: '关闭工单' })).toBeEnabled();
+  });
 });
